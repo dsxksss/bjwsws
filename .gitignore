@@ -1,0 +1,37 @@
+# 登录配置（含明文密码，禁止提交！）
+config.json
+
+# 运行时产物 / 中间文件
+*.jsonl
+scores.csv
+single_point_scores.csv
+sfe_scores.csv
+batch_jobs.log
+batch_jobs_cache.json
+wemol_sdk*.log
+wemol_sdk*cache.json
+
+# 各次运行的输出目录
+wemol_results/
+prod/
+work/
+e2e/
+_try/
+_real_test/
+_demo*/
+_crpca_download/**/work/
+
+# 突变生成中间产物（散落的 mut 文件 / FASTA，可重新生成）
+mutlists_flexddg/
+Mut_Hchains.fasta
+Mut_Lchains.fasta
+
+# Python 缓存
+__pycache__/
+*.pyc
+*.pyo
+
+# 临时脚本
+_t.py
+_*.tmp
+*.tar

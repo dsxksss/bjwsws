@@ -1,0 +1,18 @@
+{
+  "_说明": "复制此文件为 config.json 后填入实际值。base_url 必填；登录方式 user / ant_uid 二选一。",
+
+  "base_url": "http://192.168.1.145:8200",
+
+  "user": {
+    "Name":   "your_wemol_username",
+    "Passwd": "your_wemol_password"
+  },
+
+  "_ant_uid_说明": "如使用 ant_uid 方式登录，把上面的 user 整段删掉，启用下面两行",
+  "_ant_uid":    "paste-your-session-token-here",
+  "_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) ...",
+
+  "result_dir": "wemol_results",
+  "log_file":   "batch_jobs.log",
+  "cache_file": "batch_jobs_cache.json"
+}

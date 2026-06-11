@@ -1,0 +1,5 @@
+mutation,chain,location,original_aa,mutant_aa,sfe,fep,rosetta_flex,foldx,abnativ
+G112E,M,112,G,E,-0.82,0.15,-1.45,-0.90,2.1
+S32A,N,32,S,A,-0.55,0.05,-1.10,-0.40,1.8
+S33A,N,33,S,A,-0.48,0.02,-0.95,-0.35,1.7
+T59E,M,59,T,E,-0.60,-0.10,-1.20,-0.55,1.9

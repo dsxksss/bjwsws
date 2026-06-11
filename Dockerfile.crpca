@@ -1,0 +1,36 @@
+# CRPCA 序列优化流水线容器（run_pipeline / step02c）
+# - 运行用户 wemol（uid=gid=3100，与 WeMol 平台一致）
+# - 源码置于 /data/PRG/tools/Biomolecules/apps/CRPCA
+# - torch cu128（GPU 可用；wheel 自带 CUDA 运行库，无需 nvidia 基础镜像）
+#
+# 构建（在 beijing_weishengwusuo/ 目录下，build context = 本目录）：
+#   docker build -f Dockerfile.crpca -t crpca_pipeline:1.0 .
+FROM python:3.11-slim
+
+# biopython 1.79 在 slim 上可能需要编译工具
+RUN apt-get update && apt-get install -y --no-install-recommends \
+        build-essential \
+    && rm -rf /var/lib/apt/lists/*
+
+# wemol 用户/组，uid=gid=3100
+RUN groupadd -g 3100 wemol && useradd -u 3100 -g 3100 -m -s /bin/bash wemol
+
+# Python 依赖
+#  - torch 用 CPU 版（GP 训练数据量小，CPU 足够；CUDA wheel 依赖 pypi.nvidia.com，
+#    国内拉取超时，如需 GPU 可在服务器上改 --index-url .../whl/cu128 重建）
+#  - 先装 torch（CPU），再装 gpytorch，避免 gpytorch 反拉 CUDA 版 torch
+#  - numpy 固定 <2 以兼容 biopython 1.79；biopython 固定 1.79（新版移除了 three_to_one）
+#  - 其余包走清华镜像加速
+RUN pip install --no-cache-dir torch --index-url https://download.pytorch.org/whl/cpu
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
+        "numpy==1.26.4" "scipy==1.11.4" pandas scikit-learn \
+        "biopython==1.79" "gpytorch==1.15.2"
+
+# 源码（已包含 AI 修复补丁，标注 BEGIN/END PATCH）
+RUN mkdir -p /data/PRG/tools/Biomolecules/apps
+COPY --chown=3100:3100 _crpca_download/CRPCA /data/PRG/tools/Biomolecules/apps/CRPCA
+
+ENV PYTHONPATH=/data/PRG/tools/Biomolecules/apps/CRPCA
+WORKDIR /data/PRG/tools/Biomolecules/apps/CRPCA
+
+USER wemol
