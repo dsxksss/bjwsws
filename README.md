@@ -108,5 +108,5 @@ beijing_weishengwusuo/
 - **多点突变**：FoldX 原生支持；Flex DDG / FEP 当前按单点逻辑处理，跳过多点。
 - **SFE 帧兼容**：GROMACS MD 帧与 Rosetta 不兼容（链/编号被改、带氢、AMBER 命名），`sfe_rechain.py` 负责还原链/编号、去氢、残基/原子名归一，否则 Flex DDG 会失败。
 - **依赖分两套**：提交/回收用 `wemol-python-sdk`；聚合/优化用 `numpy pandas`（step02c）、`biopython==1.79`（build_pipeline_input，新版 biopython 移除了所需的 `three_to_one`）、`torch gpytorch scipy scikit-learn`（run_pipeline）。
-- **算力约束**：Flex DDG 单作业按默认 nstruct 约半天，FEP/SFE 更重且吃 GPU。全量饱和扫描中 `foldx`/`abnativ` 可全量；`flexddg`/`fep`/`sfe` 视算力对关键突变跑。
+- **算力约束**：Flex DDG 单作业按默认 nstruct 约半天，FEP/SFE 更重且吃 GPU。全量饱和扫描需相应规划 GPU 算力与时间。
 - Flex DDG 内部有 stochastic sampling，同一突变多次运行 ddG 值有 ~1 单位浮动。
