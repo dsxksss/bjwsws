@@ -164,10 +164,11 @@ def submit_one(session, task: dict[str, Any]) -> int:
     """
     params = task.get("params") or {}
 
+    # 当前 SDK(v2.0.0) 的 run_job / run_job_use_flow 只认「名字」，
+    # 没有 module_id / flow_id 形参（传了会 TypeError）。任务清单统一用名字。
     if task.get("flow_id") or task.get("flow_name"):
         return session.run_job_use_flow(
             flow_name=task.get("flow_name"),
-            flow_id=task.get("flow_id"),
             params=params,
             use_delay=False,
             result_dir_use_task_name=True,
@@ -175,7 +176,6 @@ def submit_one(session, task: dict[str, Any]) -> int:
 
     return session.run_job(
         module_name=task.get("module_name"),
-        module_id=task.get("module_id"),
         params=params,
         method_name=task.get("method_name"),
         use_delay=False,
@@ -368,18 +368,21 @@ def _parse_abnativ_seq_csv(csv_path: Path) -> dict[str, float]:
 
 def parse_abnativ(result_dir: Path, task: dict) -> dict[str, dict[str, float]]:
     """
-    AbNatiV: 结果目录里有 *_abnativ_seq_scores.csv（一个作业一份 FASTA 的多条序列打分，
-    批量型）。取每行的总分（AbNatiV V* Score），4 位小数，作为 Humanness 列。
-    seq_id 列即突变名。
+    AbnatiV: 结果目录里有按序列总分文件（一个作业一份 FASTA 的多条序列打分，批量型）。
+    取每行的总分（AbNatiV V* Score），4 位小数，作为 Humanness 列。seq_id 列即突变名。
+
+    文件名兼容两种：WeMol 模块输出 `H_seq_scores.csv` / `L_seq_scores.csv`，
+    命令行 -oid 方式输出 `*_abnativ_seq_scores.csv`。统一用 `*_seq_scores.csv` 匹配
+    （不会误匹配按残基的 `*_res_scores.csv`）。
     """
     out: dict[str, dict[str, float]] = defaultdict(dict)
     found = 0
-    for csv_path in result_dir.rglob("*_abnativ_seq_scores.csv"):
+    for csv_path in result_dir.rglob("*_seq_scores.csv"):
         found += 1
         for mut, score in _parse_abnativ_seq_csv(csv_path).items():
             out[mut]["Humanness"] = score
     if found == 0:
-        log.warning(f"[AbNatiV] {result_dir} 找不到 *_abnativ_seq_scores.csv")
+        log.warning(f"[AbnatiV] {result_dir} 找不到 *_seq_scores.csv")
     return dict(out)
 
 
@@ -490,12 +493,12 @@ def _to_pipeline_rows(
 ) -> tuple[list[dict[str, object]], int]:
     rows: list[dict[str, object]] = []
     n_foldx_ambiguous = 0
-    requested_foldx_col = _foldx_interface_to_col(foldx_interface)
+    requested_foldx_cols = _foldx_interface_to_cols(foldx_interface)
 
     for mut in sorted_muts:
         cols = aggregated[mut]
         parsed = _parse_single_mutation(mut)
-        foldx_value, ambiguous = _select_foldx_value(cols, requested_foldx_col)
+        foldx_value, ambiguous = _select_foldx_value(cols, requested_foldx_cols)
         if ambiguous:
             n_foldx_ambiguous += 1
         rows.append({
@@ -532,21 +535,36 @@ def _parse_single_mutation(mut: str) -> dict[str, object] | None:
     }
 
 
-def _foldx_interface_to_col(foldx_interface: str | None) -> str | None:
+def _foldx_interface_to_cols(foldx_interface: str | None) -> list[str] | None:
+    """
+    解析 --foldx-interface。支持单个界面（如 M_S）或 '+' 连接的多个界面求和
+    （如 M_S+N_S = 抗体两条链各自与抗原的界面之和）。返回列名列表，None 表示未指定。
+    """
     if not foldx_interface:
         return None
-    normalized = foldx_interface.strip().replace("-", "_")
-    if normalized.startswith("foldx_interface_"):
-        return normalized if normalized.endswith("_ddg") else f"{normalized}_ddg"
-    return f"foldx_interface_{normalized}_ddg"
+    out: list[str] = []
+    for part in foldx_interface.split("+"):
+        normalized = part.strip().replace("-", "_")
+        if not normalized:
+            continue
+        if normalized.startswith("foldx_interface_"):
+            col = normalized if normalized.endswith("_ddg") else f"{normalized}_ddg"
+        else:
+            col = f"foldx_interface_{normalized}_ddg"
+        out.append(col)
+    return out or None
 
 
 def _select_foldx_value(
     cols: dict[str, float],
-    requested_foldx_col: str | None,
+    requested_cols: list[str] | None,
 ) -> tuple[float | str, bool]:
-    if requested_foldx_col:
-        return cols.get(requested_foldx_col, ""), False
+    # 指定了界面：取这些界面的和（缺失的列按缺省跳过；全缺则留空）
+    if requested_cols:
+        vals = [cols[c] for c in requested_cols if c in cols]
+        if not vals:
+            return "", False
+        return sum(vals), False
 
     foldx_cols = sorted(c for c in cols if c.startswith("foldx_interface_"))
     if not foldx_cols:

@@ -65,8 +65,9 @@ def parse_args() -> argparse.Namespace:
     )
     p.add_argument(
         "--foldx-interface",
-        default=None,
-        help="FoldX interface to use for the run_pipeline foldx column, e.g. M_N.",
+        default="M_S+N_S",
+        help="FoldX 界面 → foldx 列。支持单界面（M_S）或求和（M_S+N_S，抗体-抗原结合，"
+             "本项目推荐默认）。传空串 '' 则单界面时自动取、多界面时留空。",
     )
     p.add_argument(
         "--legacy-output",

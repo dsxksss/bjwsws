@@ -176,7 +176,11 @@ DM31L,M,31,D,L,,-8.123,-11.038,,0.9000
 DM31V,M,31,D,V,,-7.456,-10.221,,0.8765
 ```
 
-> `sfe` 暂时留空；`abnativ` 来自 AbnatiV 模块（取 `AbNatiV V* Score` 总分，4 位小数）。FoldX interface 未确认前默认留空，确认后加 `--foldx-interface M_S` 等填入。
+> `abnativ` 来自 AbnatiV 模块（取 `AbNatiV V* Score` 总分，4 位小数）。
+> **FoldX**：`--foldx-interface` 默认 `M_S+N_S`（抗体两条链各自与抗原界面之和 = 抗体-抗原结合能变化；
+> 排除内部 M_N 重轻链界面）。每个单点突变只在一条链上，自然只影响对应界面，求和最稳妥。
+> 单界面用 `--foldx-interface M_S`；多界面求和用 `+` 连接。
+> `sfe` 需经 SFE 子流程（见 §3.1）补齐，没跑时留空，`run_pipeline` 会自动跳过该工具。
 
 ⚠ 注意：`fetch_batch` 输出的 `location` 是 **PDB resSeq**，而下游 `run_pipeline.py` 需要的是
 **master 序列线性位置**（重链+轻链拼接后的 1-based）。两者对重链一致、对轻链相差一个重链长度。
@@ -189,19 +193,42 @@ DM31V,M,31,D,V,,-7.456,-10.221,,0.8765
 把 Step 2 的 `scores.csv` 喂给 CRPCA 的 `run_pipeline.py`，做多点突变枚举 + GP/MEI + Pareto 筛选，
 得到最终推荐突变组合。CRPCA 代码在 `_crpca_download/CRPCA/`。
 
-### 3.1（可选）计算 SFE
+### 3.1（可选）计算 SFE —— 已自动化（全程 SDK）
 
-SFE 需要每个突变 21 forward + 21 reverse 共 42 个 Rosetta Flex ddG（来自 MD 多构象采样，
-目前未自动化）。**有了 42 值宽表后**，用 CRPCA 的 `step02c` 聚合（只需 numpy/pandas，可在本 venv 跑）：
+SFE = `(IQR_mean(forward 21) − IQR_mean(reverse 21)) / 2`，每个突变需 42 个 Rosetta Flex ddG：
+forward 取 WT 复合物 21 构象按突变算，reverse 取突变体 21 构象虚拟恢复 WT 算。整条链路已脚本化：
+
+```
+PDB Mutation(527) → 突变体PDB → flow 295(MD 10ns) → MD Trajectory(400 抽帧, Skip=500ps)
+   → 拆帧 → 42×Flex DDG(526, fwd 用 WT 帧 / rev 用突变体帧) → step02c 聚合 → sfe_scores.csv
+```
+
+涉及四个新脚本（`sfe_md.py` 用 SDK 环境的 py3.11；`step02c` 需 numpy/pandas，可用 `--step02c-python` 指向有它们的 py）：
 
 ```bash
-PYTHONPATH=_crpca_download/CRPCA python _crpca_download/CRPCA/local_pipeline/step02c_compute_sfe_from_flex_ddg.py \
-    --input prod/sfe_flex_ddg_wide.csv \
-    --output prod/sfe_scores.csv
+# (1)(2)(3) MD 编排：WT+每个突变体各跑一次 MD 并抽帧（断点续跑，MD 慢，反复运行直到全部 extracted）
+python sfe_md.py --config config.json --pdb test_files/7l7e-ab-ag-complex.pdb \
+    --mut-list prod/single_mut_list.txt --receptor-chain S --ligand-chain M,N \
+    --sim-ns 10 --skip-ps 500 --n-frames 21 \
+    --wt-frames-dir prod/frames_WT --frames-root prod/frames_mut --out-dir prod
+# ⚠ 首次真实运行后核对下载结果文件名，必要时调 --mutant-pdb-glob / --traj-glob
+
+# (4a) 生成 42×Flex DDG 任务（fwd=WT帧+→突变, rev=突变体帧+→WT）
+python sfe_prepare.py --mut-list prod/single_mut_list.txt \
+    --wt-frames-dir prod/frames_WT --wt-tag WT --mut-frames-root prod/frames_mut \
+    --n-frames 21 --out-dir prod
+python submit_batch.py --config config.json --tasks prod/tasks_sfe.csv -o sfe_jobs.jsonl
+
+# (4b)(5) 回收 ddG → 42 列宽表 → step02c 出 sfe_scores.csv（反复运行直到 Doing=0）
+python sfe_fetch.py --config config.json --input sfe_jobs.jsonl --n-frames 21 \
+    --wide-output prod/sfe_flex_ddg_wide.csv \
+    --run-step02c --sfe-output prod/sfe_scores.csv \
+    --step02c-python /path/to/py-with-numpy-pandas
 ```
 
 宽表列：`mutation,chain,forward_01..forward_21,reverse_01..reverse_21`（`mutation` 用与
-`scores.csv` 一致的命名，如 `DM31L`）。公式 `SFE=(IQR_mean(forward)-IQR_mean(reverse))/2`。
+`scores.csv` 一致的命名，如 `DM31L`）。测试时调小：`--sim-ns 1 --skip-ps 500 --n-frames 3` + `--limit 2`。
+`sfe_split_frames.py` 是被 `sfe_md.py` 调用的拆帧工具（也可单独用）。
 
 ### 3.2 生成 run_pipeline 就绪输入（必做）
 
