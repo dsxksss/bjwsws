@@ -275,7 +275,7 @@ PYTHONPATH=_crpca_download/CRPCA python _crpca_download/CRPCA/local_pipeline/run
 
 > CPU 实测约 70 秒，无需 GPU/容器。`Dockerfile.crpca` 保留作将来 GPU 容器化的参考（如需）。
 >
-> ⚠ CRPCA 代码含 3 处 AI 修复补丁（均标注 `BEGIN/END PATCH`），使 run_pipeline 可运行：
+> ⚠ CRPCA 代码含 3 处本地适配补丁（均标注 `BEGIN/END PATCH`），使 run_pipeline 可运行：
 > - `abag_ml/pareto_selection.py`：缺失模块改可选导入
 > - `local_pipeline/run_pipeline.py`：派生 `mutationHumanReadable` + Pareto 跳过全 NaN 目标
 > - `local_pipeline/common/objective_aggregate.py`：按工具独立处理 NaN（支持 sfe 留空）
@@ -361,10 +361,9 @@ for m in mod.methods:
   - ⚠ AbnatiV 模块需在 WeMol 把 `*_abnativ_seq_scores.csv` 绑定为输出文件，
     否则 SDK 下载不到（按残基的 `*_res_scores.csv` 没有序列总分，无法替代）
 - **序列优化（Step 3）**：已打通。`build_pipeline_input.py`（location 修正 + SFE 合并）+
-  `run_pipeline.py`（CPU ≈ 70 秒，本 venv 直接跑）。CRPCA 代码含 3 处 AI 修复补丁（见 3.3）
-- **PDB Mutation / MD** 待模块上线后补 parser
-- **SFE 流程**：`step02c` 已能算（输入 42 个 flex ddG 宽表）；但宽表的来源
-  （MD → 21 构象 → forward/reverse flex ddG）尚未自动化，故 `sfe` 列暂空
+  `run_pipeline.py`（CPU ≈ 70 秒，本 venv 直接跑）。CRPCA 代码含 3 处本地适配补丁（见 3.3）
+- **SFE 流程**：已全自动化（见 §3.1）。`sfe_md.py` 编排 PDB Mutation + GROMACS MD + 抽帧 + rechain，
+  `sfe_prepare`/`sfe_fetch` 出 42 列宽表，`step02c` 聚合成 `sfe` 列
 - **多点突变**：FoldX 原生支持；Flex DDG 和 FEP 当前按单点逻辑处理，跳过多点
 - **依赖**：`build_pipeline_input.py` 需 `biopython==1.79`（新版 biopython 移除了
   CRPCA 用到的 `three_to_one`，故固定 1.79）

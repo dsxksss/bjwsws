@@ -26,7 +26,7 @@ RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple \
         "numpy==1.26.4" "scipy==1.11.4" pandas scikit-learn \
         "biopython==1.79" "gpytorch==1.15.2"
 
-# 源码（已包含 AI 修复补丁，标注 BEGIN/END PATCH）
+# 源码（已包含本地适配补丁，标注 BEGIN/END PATCH）
 RUN mkdir -p /data/PRG/tools/Biomolecules/apps
 COPY --chown=3100:3100 _crpca_download/CRPCA /data/PRG/tools/Biomolecules/apps/CRPCA
 
