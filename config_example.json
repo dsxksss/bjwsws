@@ -1,7 +1,7 @@
 {
   "_说明": "复制此文件为 config.json 后填入实际值。base_url 必填；登录方式 user / ant_uid 二选一。",
 
-  "base_url": "http://192.168.1.145:8200",
+  "base_url": "http://<wemol-host>:8200",
 
   "user": {
     "Name":   "your_wemol_username",

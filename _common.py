@@ -29,7 +29,7 @@ def build_session(config_path: str | Path):
 
     config.json 示例（账号密码登录）：
     {
-      "base_url": "http://192.168.1.145:8200",
+      "base_url": "http://<wemol-host>:8200",
       "user":     {"Name": "your_name", "Passwd": "your_password"},
       "result_dir":     "wemol_results",
       "log_file":       "batch_jobs.log",
@@ -38,7 +38,7 @@ def build_session(config_path: str | Path):
 
     config.json 示例（ant_uid 登录）：
     {
-      "base_url": "http://192.168.1.145:8200",
+      "base_url": "http://<wemol-host>:8200",
       "ant_uid":  "xxxx-session-token-xxxx",
       "user_agent": "Mozilla/5.0 ...",
       "result_dir":     "wemol_results",
