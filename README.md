@@ -79,7 +79,7 @@ beijing_weishengwusuo/
 - `local_pipeline/run_pipeline.py`：派生 `mutationHumanReadable` + Pareto 跳过全 NaN 目标
 - `local_pipeline/common/objective_aggregate.py`：按工具独立处理 NaN（支持 sfe 留空）
 
-`run_pipeline.py` 依赖 `torch` / `gpytorch` / `biopython==1.79` / `scipy` / `scikit-learn`，CPU 即可（实测 426 突变 ≈ 70 秒，无需 GPU/容器）。`Dockerfile.crpca` 保留作将来 GPU 容器化的参考。
+`run_pipeline.py` 依赖 `torch` / `gpytorch` / `biopython==1.79` / `scipy` / `scikit-learn`，CPU 即可（实测 426 突变 ≈ 70 秒，无需 GPU/容器）。
 
 ---
 
