@@ -26,7 +26,6 @@ beijing_weishengwusuo/
 ├── sfe_split_frames.py        SFE 内部：多帧 PDB 拆单帧（被 sfe_md 调用）
 ├── sfe_rechain.py             SFE 内部：GROMACS 帧 → Rosetta 兼容（被 sfe_md 调用）
 ├── _common.py                 共享工具（session / 结果解析 / IO）
-├── mutation_list.py           实验室原版突变生成脚本（备用，需 anarci+biopython）
 ├── _crpca_download/CRPCA/     CRPCA 序列优化流水线（step02c / run_pipeline 等）
 └── test_files/                示例 PDB（7l7e）+ mut_list
 ```
